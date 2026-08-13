@@ -29,7 +29,7 @@ Developed by **Sanne Karibo** (`github.com/sanneemmanuel`) under **CS-TECHNOLOGY
 
 ## 📊 Performance
 
-CAT is benchmarked against the default Linux `cat` using **Hyperfine**.
+CAT is benchmarked on worst case hardware against the default Linux `cat` using **Hyperfine**.
 
 ![CAT Hyperfine Benchmark](results.png)
 
