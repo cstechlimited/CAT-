@@ -31,9 +31,7 @@ Developed by **Sanne Karibo** (`github.com/sanneemmanuel`) under **CS-TECHNOLOGY
 
 CAT is benchmarked against the default Linux `cat` using **Hyperfine**.
 
-<!-- Place Hyperfine benchmark screenshot here -->
-
-![CAT Hyperfine Benchmark](docs/hyperfine.png)
+![CAT Hyperfine Benchmark](results.png)
 
 > Results may vary depending on hardware, filesystem, kernel, cache state, and workload.
 
@@ -41,27 +39,75 @@ CAT is benchmarked against the default Linux `cat` using **Hyperfine**.
 
 ## 📥 Installation
 
-### Download the Binary
+There are two ways to install CAT: **download the prebuilt binary** or **build it yourself**.
 
-Download the prebuilt `cat` binary from the project's releases:
+### Option 1 — Download the Binary
+
+Download the prebuilt `cat` binary from the project's releases.
+
+Make it executable:
 
 ```bash
 chmod +x cat
 ```
 
-Optionally install it system-wide:
+Install it as `cat2`:
 
 ```bash
-sudo cp cat /usr/local/bin/cat
+sudo cp cat /usr/local/bin/cat2
 ```
 
-### Build from Assembly
-
-The generated assembly is included as `cat.S`.
+You can then run:
 
 ```bash
-gcc -nostdlib -static -o cat cat.S
-chmod +x cat
+cat2 filename
+```
+
+---
+
+### Option 2 — Build and Install with Make
+
+CAT includes a `Makefile` for simple installation.
+
+Make sure `cat.S` and the `Makefile` are in the same directory, then run:
+
+```bash
+sudo make
+```
+
+The Makefile will:
+
+1. Compile `cat.S`
+2. Build the native `cat2` executable
+3. Set the correct executable permissions
+4. Install CAT to `/usr/local/bin/cat2`
+
+After installation:
+
+```bash
+cat2 filename
+```
+
+To verify the installation:
+
+```bash
+which cat2
+```
+
+The expected result is:
+
+```text
+/usr/local/bin/cat2
+```
+
+### Build Manually
+
+If you prefer not to use `make`, compile the assembly directly:
+
+```bash
+gcc -nostdlib -static -o cat2 cat.S
+chmod +x cat2
+sudo install -m 755 cat2 /usr/local/bin/cat2
 ```
 
 CAT is designed to run without glibc or dynamically linked runtime libraries.
@@ -73,25 +119,25 @@ CAT is designed to run without glibc or dynamically linked runtime libraries.
 CAT keeps the interface you already know.
 
 ```bash
-./cat filename
+cat2 filename
 ```
 
 Multiple files:
 
 ```bash
-./cat file1.txt file2.txt
+cat2 file1.txt file2.txt
 ```
 
 Redirect output:
 
 ```bash
-./cat file.txt > output.txt
+cat2 file.txt > output.txt
 ```
 
 Use it in a pipeline:
 
 ```bash
-./cat file.txt | grep "hello"
+cat2 file.txt | grep "hello"
 ```
 
 > **If you know `cat`, you already know CAT.**
@@ -114,7 +160,13 @@ cat.sufi
 cat.S
 ```
 
-View the source:
+**Build system:**
+
+```text
+Makefile
+```
+
+View the Sufi source:
 
 ```bash
 less cat.sufi
@@ -126,6 +178,12 @@ View the generated assembly:
 less cat.S
 ```
 
+View the build instructions:
+
+```bash
+less Makefile
+```
+
 ### From Source to Native Binary
 
 ```text
@@ -135,7 +193,9 @@ Sanne Karibo
    ↓
 cat.S
    ↓
-Native CAT
+Makefile / GCC
+   ↓
+cat2
 ```
 
 Every layer is open for inspection.
