@@ -1,0 +1,6 @@
+//written by SANNE KARIBO 
+
+_main(cc, file){
+sayf(%s,fileOpen(file[--cc]));sayx();
+  return 0;
+}
