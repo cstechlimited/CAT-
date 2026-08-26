@@ -22,20 +22,42 @@ jobs:
           )
 
           echo MT5 installer downloaded.
+          dir "%GITHUB_WORKSPACE%\mt5setup.exe"
 
       - name: Install MT5
         shell: cmd
         run: |
           echo Installing MT5...
+          echo.
 
-          "%GITHUB_WORKSPACE%\mt5setup.exe" /auto
+          "%GITHUB_WORKSPACE%\mt5setup.exe" /auto > "%GITHUB_WORKSPACE%\mt5_install.log" 2>&1
 
-          if not "%ERRORLEVEL%"=="0" (
-              echo MT5 installation failed
-              exit /b %ERRORLEVEL%
+          set "EXIT_CODE=%ERRORLEVEL%"
+
+          echo.
+          echo ===== MT5 INSTALLER OUTPUT =====
+          type "%GITHUB_WORKSPACE%\mt5_install.log"
+
+          echo.
+          echo ===== INSTALLER EXIT CODE =====
+          echo %EXIT_CODE%
+
+          if not "%EXIT_CODE%"=="0" (
+              echo.
+              echo MT5 installation failed.
+              exit /b %EXIT_CODE%
           )
 
-          echo MT5 installed.
+          echo.
+          echo MT5 installed successfully.
+
+      - name: Upload MT5 install log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mt5-install-log
+          path: mt5_install.log
+          if-no-files-found: warn
 
       - name: Find MT5
         shell: powershell
@@ -56,19 +78,25 @@ jobs:
               exit 1
           }
 
-          Write-Host "MT5 found: $($mt5.FullName)"
+          Write-Host "MT5 found:"
+          Write-Host $mt5.FullName
+
           "MT5_EXE=$($mt5.FullName)" >> $env:GITHUB_ENV
 
       - name: Run MT5
         shell: cmd
         run: |
           echo Starting MT5 in portable mode...
-          echo Configuration: %GITHUB_WORKSPACE%\mt5.ini
+          echo Configuration:
+          echo %GITHUB_WORKSPACE%\mt5.ini
+          echo.
 
           "%MT5_EXE%" /portable /config:"%GITHUB_WORKSPACE%\mt5.ini"
 
+          set "MT5_EXIT=%ERRORLEVEL%"
+
           echo.
-          echo MT5 exited with code %ERRORLEVEL%
+          echo MT5 exited with code %MT5_EXIT%
 
       - name: Check MT5 results
         shell: powershell
