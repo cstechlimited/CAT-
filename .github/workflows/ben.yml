@@ -20,11 +20,24 @@ jobs:
         shell: cmd
         run: |
           mt5setup.exe /auto /path:"C:\MT5"
-          if errorlevel 1 exit /b 1
+          echo Installer exit code: %ERRORLEVEL%
+
+          echo Checking C:\MT5...
+
+          if exist "C:\MT5\terminal64.exe" (
+            echo MT5 installed successfully
+            dir "C:\MT5"
+          ) else (
+            echo MT5 was NOT installed
+            dir "C:\MT5" 2>nul
+            exit /b 1
+          )
 
       - name: Run
         shell: powershell
         run: |
           $exe = Get-ChildItem C:\MT5 -Filter terminal64.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if (!$exe) { exit 1 }
+
+          Write-Host "MT5 found: $($exe.FullName)"
           & $exe.FullName /portable /config:"$env:GITHUB_WORKSPACE\mt5.ini"
