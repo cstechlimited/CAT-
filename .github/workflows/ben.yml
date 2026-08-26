@@ -14,15 +14,33 @@ jobs:
       - name: Download MT5
         shell: cmd
         run: |
-          curl -L "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -o mt5setup.exe
+          curl -fL "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -o "%GITHUB_WORKSPACE%\mt5setup.exe"
+
+          if not exist "%GITHUB_WORKSPACE%\mt5setup.exe" (
+              echo MT5 installer was not downloaded
+              exit /b 1
+          )
+
+          echo MT5 installer downloaded:
+          dir "%GITHUB_WORKSPACE%\mt5setup.exe"
+
+      - name: Test MT5 installer
+        shell: cmd
+        run: |
+          echo Testing installer...
+
+          "%GITHUB_WORKSPACE%\mt5setup.exe" /?
+
+          echo Installer exit code: %ERRORLEVEL%
+
+          exit /b 0
 
       - name: Install MetaTrader 5
         shell: cmd
         run: |
           echo Starting MetaTrader 5 installer...
-          echo.
 
-          "%TEMP%\mt5setup.exe"
+          "%GITHUB_WORKSPACE%\mt5setup.exe"
 
           echo.
           echo Installer exit code: %ERRORLEVEL%
@@ -30,13 +48,39 @@ jobs:
           exit /b 0
 
       - name: Find MT5 terminal
-        shell: cmd
+        shell: powershell
         run: |
-          where /r "C:\Program Files" terminal64.exe
-          where /r "C:\Program Files (x86)" terminal64.exe
+          Write-Host "Searching for terminal64.exe..."
+
+          $mt5 = Get-ChildItem `
+            "C:\Program Files",
+            "C:\Program Files (x86)",
+            "$env:LOCALAPPDATA" `
+            -Filter "terminal64.exe" `
+            -Recurse `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+          if (!$mt5) {
+              Write-Host "terminal64.exe was not found."
+              exit 1
+          }
+
+          Write-Host "MT5 found:"
+          Write-Host $mt5.FullName
+
+          "MT5_EXE=$($mt5.FullName)" >> $env:GITHUB_ENV
 
       - name: Run MT5 from CMD
         shell: cmd
         run: |
-          cd /d "C:\Program Files\MetaTrader 5"
-          terminal64.exe /config:"%GITHUB_WORKSPACE%\mt5.ini"
+          echo MT5 executable:
+          echo %MT5_EXE%
+
+          echo.
+          echo Starting MetaTrader 5...
+
+          "%MT5_EXE%" /config:"%GITHUB_WORKSPACE%\mt5.ini"
+
+          echo.
+          echo MT5 exit code: %ERRORLEVEL%
