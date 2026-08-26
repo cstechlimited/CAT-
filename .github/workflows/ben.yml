@@ -8,116 +8,23 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download MT5
+      - name: Download
         shell: cmd
         run: |
-          curl -fL "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -o "%GITHUB_WORKSPACE%\mt5setup.exe"
+          curl -fL "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -o mt5setup.exe
+          if not exist mt5setup.exe exit /b 1
+          for %%A in (mt5setup.exe) do if %%~zA==0 exit /b 1
+          echo Downloaded mt5setup.exe
 
-          if not exist "%GITHUB_WORKSPACE%\mt5setup.exe" (
-              echo MT5 installer was not downloaded
-              exit /b 1
-          )
-
-          echo MT5 installer downloaded.
-          dir "%GITHUB_WORKSPACE%\mt5setup.exe"
-
-      - name: Install MT5
+      - name: Install
         shell: cmd
         run: |
-          echo Installing MT5...
-          echo.
+          mt5setup.exe /auto /path:"C:\MT5"
+          if errorlevel 1 exit /b 1
 
-          "%GITHUB_WORKSPACE%\mt5setup.exe" /auto > "%GITHUB_WORKSPACE%\mt5_install.log" 2>&1
-
-          set "EXIT_CODE=%ERRORLEVEL%"
-
-          echo.
-          echo ===== MT5 INSTALLER OUTPUT =====
-          type "%GITHUB_WORKSPACE%\mt5_install.log"
-
-          echo.
-          echo ===== INSTALLER EXIT CODE =====
-          echo %EXIT_CODE%
-
-          if not "%EXIT_CODE%"=="0" (
-              echo.
-              echo MT5 installation failed.
-              exit /b %EXIT_CODE%
-          )
-
-          echo.
-          echo MT5 installed successfully.
-
-      - name: Upload MT5 install log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mt5-install-log
-          path: mt5_install.log
-          if-no-files-found: warn
-
-      - name: Find MT5
+      - name: Run
         shell: powershell
         run: |
-          Write-Host "Searching for terminal64.exe..."
-
-          $mt5 = Get-ChildItem `
-            "C:\Program Files",
-            "C:\Program Files (x86)",
-            "$env:LOCALAPPDATA" `
-            -Filter "terminal64.exe" `
-            -Recurse `
-            -ErrorAction SilentlyContinue |
-            Select-Object -First 1
-
-          if (!$mt5) {
-              Write-Host "MT5 was not found."
-              exit 1
-          }
-
-          Write-Host "MT5 found:"
-          Write-Host $mt5.FullName
-
-          "MT5_EXE=$($mt5.FullName)" >> $env:GITHUB_ENV
-
-      - name: Run MT5
-        shell: cmd
-        run: |
-          echo Starting MT5 in portable mode...
-          echo Configuration:
-          echo %GITHUB_WORKSPACE%\mt5.ini
-          echo.
-
-          "%MT5_EXE%" /portable /config:"%GITHUB_WORKSPACE%\mt5.ini"
-
-          set "MT5_EXIT=%ERRORLEVEL%"
-
-          echo.
-          echo MT5 exited with code %MT5_EXIT%
-
-      - name: Check MT5 results
-        shell: powershell
-        run: |
-          Write-Host "Checking for MT5 reports..."
-
-          $reports = Get-ChildItem `
-            "$env:GITHUB_WORKSPACE",
-            "$env:LOCALAPPDATA" `
-            -Recurse `
-            -File `
-            -ErrorAction SilentlyContinue |
-            Where-Object {
-              $_.Extension -in ".xml", ".html", ".htm" -and
-              $_.Name -notmatch "mt5setup"
-            }
-
-          if ($reports) {
-              Write-Host "Reports found:"
-              $reports | Select-Object FullName, Length
-          }
-          else {
-              Write-Host "No MT5 report found."
-          }
+          $exe = Get-ChildItem C:\MT5 -Filter terminal64.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (!$exe) { exit 1 }
+          & $exe.FullName /portable /config:"$env:GITHUB_WORKSPACE\mt5.ini"
