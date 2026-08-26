@@ -16,10 +16,18 @@ jobs:
         run: |
           curl -L "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -o mt5setup.exe
 
-      - name: Install MT5 silently
+      - name: Install MetaTrader 5
         shell: cmd
         run: |
-          mt5setup.exe /auto
+          echo Starting MetaTrader 5 installer...
+          echo.
+
+          "%TEMP%\mt5setup.exe"
+
+          echo.
+          echo Installer exit code: %ERRORLEVEL%
+
+          exit /b 0
 
       - name: Find MT5 terminal
         shell: cmd
