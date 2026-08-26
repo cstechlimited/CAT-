@@ -21,33 +21,23 @@ jobs:
               exit /b 1
           )
 
-          echo MT5 installer downloaded:
-          dir "%GITHUB_WORKSPACE%\mt5setup.exe"
+          echo MT5 installer downloaded.
 
-      - name: Test MT5 installer
+      - name: Install MT5
         shell: cmd
         run: |
-          echo Testing installer...
+          echo Installing MT5...
 
-          "%GITHUB_WORKSPACE%\mt5setup.exe" /?
+          "%GITHUB_WORKSPACE%\mt5setup.exe" /auto
 
-          echo Installer exit code: %ERRORLEVEL%
+          if not "%ERRORLEVEL%"=="0" (
+              echo MT5 installation failed
+              exit /b %ERRORLEVEL%
+          )
 
-          exit /b 0
+          echo MT5 installed.
 
-      - name: Install MetaTrader 5
-        shell: cmd
-        run: |
-          echo Starting MetaTrader 5 installer...
-
-          "%GITHUB_WORKSPACE%\mt5setup.exe"
-
-          echo.
-          echo Installer exit code: %ERRORLEVEL%
-
-          exit /b 0
-
-      - name: Find MT5 terminal
+      - name: Find MT5
         shell: powershell
         run: |
           Write-Host "Searching for terminal64.exe..."
@@ -62,25 +52,44 @@ jobs:
             Select-Object -First 1
 
           if (!$mt5) {
-              Write-Host "terminal64.exe was not found."
+              Write-Host "MT5 was not found."
               exit 1
           }
 
-          Write-Host "MT5 found:"
-          Write-Host $mt5.FullName
-
+          Write-Host "MT5 found: $($mt5.FullName)"
           "MT5_EXE=$($mt5.FullName)" >> $env:GITHUB_ENV
 
-      - name: Run MT5 from CMD
+      - name: Run MT5
         shell: cmd
         run: |
-          echo MT5 executable:
-          echo %MT5_EXE%
+          echo Starting MT5 in portable mode...
+          echo Configuration: %GITHUB_WORKSPACE%\mt5.ini
+
+          "%MT5_EXE%" /portable /config:"%GITHUB_WORKSPACE%\mt5.ini"
 
           echo.
-          echo Starting MetaTrader 5...
+          echo MT5 exited with code %ERRORLEVEL%
 
-          "%MT5_EXE%" /config:"%GITHUB_WORKSPACE%\mt5.ini"
+      - name: Check MT5 results
+        shell: powershell
+        run: |
+          Write-Host "Checking for MT5 reports..."
 
-          echo.
-          echo MT5 exit code: %ERRORLEVEL%
+          $reports = Get-ChildItem `
+            "$env:GITHUB_WORKSPACE",
+            "$env:LOCALAPPDATA" `
+            -Recurse `
+            -File `
+            -ErrorAction SilentlyContinue |
+            Where-Object {
+              $_.Extension -in ".xml", ".html", ".htm" -and
+              $_.Name -notmatch "mt5setup"
+            }
+
+          if ($reports) {
+              Write-Host "Reports found:"
+              $reports | Select-Object FullName, Length
+          }
+          else {
+              Write-Host "No MT5 report found."
+          }
